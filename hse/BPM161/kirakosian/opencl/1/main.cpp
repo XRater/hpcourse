@@ -36,7 +36,7 @@ int main() {
 
         // create platform
         cl::Platform::get(&platforms);
-        platforms[0].getDevices(CL_DEVICE_TYPE_CPU, &devices);
+        platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
         // create context
         cl::Context context(devices);
