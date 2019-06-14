@@ -9,6 +9,9 @@
 #include <iomanip>
 #include <cmath>
 
+int fit_size(int n, int block_size) {
+    return n % block_size == 0 ? n : (n / block_size + 1) * block_size;
+}
 
 void fill_data(std::vector<float> &v, int n) {
     float value;
@@ -95,7 +98,7 @@ int main() {
         // load named kernel from opencl source
         cl::Kernel kernel(program, "convolution");
         cl::KernelFunctor convolution(kernel, queue, cl::NullRange,
-                                      cl::NDRange(a_size, a_size),
+                                      cl::NDRange(fit_size(n, block_size), fit_size(n, block_size)),
                                       cl::NDRange(block_size, block_size));
 
         convolution(dev_a, dev_b, dev_c, n, m);
