@@ -9,7 +9,11 @@
 #include <iomanip>
 #include <cmath>
 
-size_t const BLOCK_SIZE = 2;
+size_t const BLOCK_SIZE = 256;
+
+int fit_size(int n, int block_size) {
+    return n % block_size == 0 ? n : (n / block_size + 1) * block_size;
+}
 
 void fill_data(std::vector<float> &v, int n) {
     float value;
@@ -43,10 +47,15 @@ void call_apply_shifts(
     queue.enqueueWriteBuffer(dev_input, CL_TRUE, 0, sizeof(float) * input.size(), &input[0]);
     queue.enqueueWriteBuffer(dev_shifts, CL_TRUE, 0, sizeof(float) * shifts.size(), &shifts[0]);
     queue.finish();
-
+    
     // load named kernel from opencl source
     cl::Kernel kernel_hs(program, "apply_shifts");
-    cl::KernelFunctor apply_shifts(kernel_hs, queue, cl::NullRange, cl::NDRange(input.size()), cl::NDRange(BLOCK_SIZE));
+    cl::KernelFunctor apply_shifts(
+        kernel_hs, queue,
+        cl::NullRange,
+        cl::NDRange(fit_size(input.size(), BLOCK_SIZE)),
+        cl::NDRange(BLOCK_SIZE)
+    );
     cl::Event event = apply_shifts((int) input.size(), dev_input, dev_shifts, dev_output);
     event.wait();
 
@@ -74,7 +83,7 @@ void evaluate_prefix_sums(
 
     // load named kernel from opencl source
     cl::Kernel kernel_hs(program, "scan_hillis_steele");
-    cl::KernelFunctor scan_hs(kernel_hs, queue, cl::NullRange, cl::NDRange(n), cl::NDRange(BLOCK_SIZE));
+    cl::KernelFunctor scan_hs(kernel_hs, queue, cl::NullRange, cl::NDRange(fit_size(n, BLOCK_SIZE)), cl::NDRange(BLOCK_SIZE));
     cl::Event event = scan_hs(
         n,
         dev_input,
@@ -83,7 +92,7 @@ void evaluate_prefix_sums(
         cl::__local(sizeof(float) * BLOCK_SIZE)
     );
     event.wait();
-    
+
     if (n <= BLOCK_SIZE) {
         queue.enqueueReadBuffer(dev_output, CL_TRUE, 0, sizeof(float) * n, &output[0]);    
     } else {
@@ -140,7 +149,7 @@ int main() {
 		}
 
         freopen("input.txt", "r", stdin);
-        freopen("output.txt", "w", stdout);
+       // freopen("output.txt", "w", stdout);
 
         int n;
         std::cin >> n;
